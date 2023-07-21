@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 public class DummyCompletableFutureExample {
 
     /**
-     * To demonstrate using a dummy CompletableFuture<Void> to chain tasks
+     * to demonstrate using a dummy CompletableFuture<Void> to chain tasks
      */
     public static void example1() {
         Supplier<List<Long>> supplyIDs = () -> {

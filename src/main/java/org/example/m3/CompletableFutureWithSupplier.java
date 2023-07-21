@@ -6,6 +6,9 @@ import java.util.function.Supplier;
 public class CompletableFutureWithSupplier {
 
 
+    /**
+     * to demonstrate using join to get the CompletableFuture result
+     */
     public static void example1() {
         Supplier<String> supplier = () -> Thread.currentThread().getName();
 
@@ -17,6 +20,9 @@ public class CompletableFutureWithSupplier {
         System.out.println("Result: " + result);
     }
 
+    /**
+     * to demonstrate using complete() with default value
+     */
     public static void example2() {
         Supplier<String> supplier = () -> {
             try {
@@ -37,6 +43,10 @@ public class CompletableFutureWithSupplier {
         System.out.println("Result 1: " + result);
     }
 
+    /**
+     * to demonstrate using obtrudeValue() with default value
+     * you can compare that with example2
+     */
     public static void example3() {
         Supplier<String> supplier = () -> {
             try {
@@ -53,7 +63,7 @@ public class CompletableFutureWithSupplier {
         String result = future.join();
         System.out.println("Result 1: " + result);
 
-        // if the task is already done, it ALSO overwrite with default value
+        // if the task is already done, it ALSO overwrites with default value
         future.obtrudeValue("default value");
 
         result = future.join();

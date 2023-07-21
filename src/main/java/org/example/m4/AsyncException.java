@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 public class AsyncException {
 
     /**
-     * to demonstrate using exceptionally
+     * to demonstrate using exceptionally()
      */
     public static void example1() {
         Supplier<List<Long>> supplyIDs = () -> {
@@ -63,7 +63,7 @@ public class AsyncException {
     }
 
     /**
-     * to demonstrate using join
+     * to demonstrate using exceptionally() and join
      * see "--->"
      */
     public static void example2() {

@@ -137,7 +137,7 @@ public class AsyncExample {
     }
 
     /**
-     * To demonstrate running on different threads
+     * to demonstrate running on different threads
      * see " ---> "
      */
     public static void example4() {
