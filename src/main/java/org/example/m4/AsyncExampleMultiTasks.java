@@ -4,6 +4,7 @@ import org.example.m4.model.Email;
 import org.example.m4.model.User;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -11,8 +12,11 @@ import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 public class AsyncExampleMultiTasks {
+
+    record NewObject(String s1, String s2) {}
 
     /**
      * to demonstrate how to wait for both tasks complete, and then run something else
@@ -145,9 +149,158 @@ public class AsyncExampleMultiTasks {
         executorService.shutdown();
     }
 
+    /**
+     * to demonstrate a CompletableFuture completes when ANY of the tasks completes
+     */
+    public static void example3() {
+        Supplier<String> s1 = () -> {
+            sleep(200);
+            System.out.println("s1");
+            return "s1";
+        };
+
+        Supplier<String> s2 = () -> {
+            sleep(150);
+            System.out.println("s2");
+            return "s2";
+        };
+
+        Supplier<String> s3 = () -> {
+            sleep(100);
+            System.out.println("s3");
+            return "s3";
+        };
+
+        // these three supplyAsync will run in the background, regardless having anyOf() or not.
+        var cf1 = CompletableFuture.supplyAsync(s1);
+        var cf2 = CompletableFuture.supplyAsync(s2);
+        var cf3 = CompletableFuture.supplyAsync(s3);
+
+        // anyOf takes CompletableFutures of the same type
+        var cf = CompletableFuture.anyOf(cf1, cf2, cf3);
+
+        // cf will return s3, as s3 is the fastest
+        cf.thenAccept(string -> {
+            System.out.println("cf completes: " + string);
+        }).join();
+
+        // you shall only see cf3 is completed
+        System.out.println("cf1 completed = " + cf1.isDone());
+        System.out.println("cf2 completed = " + cf2.isDone());
+        System.out.println("cf3 completed = " + cf3.isDone());
+
+        System.out.println("Without join(), this line will run first, and the main thread will shutdown");
+    }
+
+    /**
+     * to demonstrate a CompletableFuture completes when ALL the tasks completes
+     * and how to consume their results
+     * see "--->"
+     */
+    public static void example4() {
+        Supplier<Integer> s1 = () -> {
+            sleep(200);
+            System.out.println("s1 - 200");
+            return 200;
+        };
+
+        Supplier<Integer> s2 = () -> {
+            sleep(150);
+            System.out.println("s2 - 150");
+            return 150;
+        };
+
+        Supplier<Integer> s3 = () -> {
+            sleep(100);
+            System.out.println("s3 - 100");
+            return 100;
+        };
+
+        // these three supplyAsync will run in the background, regardless having anyOf() or not.
+        var cf1 = CompletableFuture.supplyAsync(s1);
+        var cf2 = CompletableFuture.supplyAsync(s2);
+        var cf3 = CompletableFuture.supplyAsync(s3);
+
+        // ---> "allOf" carries CompletableFuture of any types as its parameters, but it does not contain results.
+        // ---> this is why we use <Void>
+        CompletableFuture<Void> allDone = CompletableFuture.allOf(cf1, cf2, cf3);
+
+        // ---> e.g. if we want to get the minimum value of all the three CompletableFutures
+        // 1. use Stream API, e.g. Stream.of, passing in the CompletableFutures cf1, cf2, cf3
+        int smallestNumber = allDone.thenApply(
+                /* ---> the cf1, cf2, cf3 have completed already, so they will not re-run again here - they simply contain results */
+                nil /*null*/ -> Stream.of(cf1, cf2, cf3)
+                        /* ---> convert the CompletableFuture to their results, by using join() */
+                        .map(cf -> {
+                            System.out.println("Getting results - " + Thread.currentThread().getName());
+                            /* ---> we use the join to get the results -
+                            in this case, the join only runs when all of them completes,
+                            so it will NOT block the processing thread. */
+                            return cf.join();
+                        })
+                        /*Function.identity() return the value itself for comparison*/
+                        .min(Comparator.comparing(Function.identity()))
+                        .orElseThrow()
+        // you need the last join() here to hold the main thread, until the allDone CF completes.
+        ).join();
+
+        // this code is blocked
+        System.out.println("Min result - " + smallestNumber + " - " + Thread.currentThread().getName());
+    }
+
+    /**
+     * to demonstrate when to use thenCompose
+     * Imagine you need to create new object, based on the results from two long-running tasks
+     * This pattern is used when you want to combine two completable futures that carries two asynchronous results.
+     */
+    public static void example5() {
+        Supplier<String> s1 = () -> {
+            sleep(200);
+            System.out.println("s1");
+            return "s1";
+        };
+
+        Supplier<String> s2 = () -> {
+            sleep(150);
+            System.out.println("s2");
+            return "s2";
+        };
+
+        var cf1 = CompletableFuture.supplyAsync(s1);
+        var cf2 = CompletableFuture.supplyAsync(s2);
+
+        // Method 1:
+        // you can use the get() / join()
+        // this also blocks the main thread
+        // var newObject = new NewObject(cf1.join(), cf2.join());
+        //System.out.println("New Object: " + newObject);
+
+        // Method 2:
+        // you can use thenCombine()
+        // use 1 future (cf1) to combine the second (cf2)
+        //var newObject = cf1
+        //        .thenCombine(cf2, (r1 /*result of s1*/, r2/*result of s2*/) -> new NewObject(r1, r2))
+        //        .join();
+        //System.out.println("New Object: " + newObject);
+
+        // Method 3:
+        // you can use thenCompose()
+        // use 1 future (cf1) to compose a CompletableFuture by using:
+        // the result of cf1 and the second CompletableFuture (cf2)
+        // i.e. you return a CompletableFuture inside the thenCompose() function, then get flatten (like flatMap)
+        // This is the major difference, e.g. inside the supplyAsync(s1) you return a String
+        cf1.thenCompose(
+                r1 /*result of cf1*/ -> cf2.thenApply(r2 /*result of cf2*/ -> new NewObject(r1, r2))
+        ).thenAccept(
+                newObject -> System.out.println("New Object: " + newObject)
+        ).join();
+    }
     public static void main(String[] args) {
         //example1();
-        example2();
+        //example2();
+        //example3();
+        //example4();
+        example5();
 
     }
 
