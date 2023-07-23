@@ -41,3 +41,13 @@ I also provided my independent opinions via comments.
 16. **HttpClientExample.example1**: to demonstrate to use http request
 17. **HttpClientExample.example2**: to demonstrate to send async http request, and different ways to fetch the result
 18. **HttpClientExample.example3**: to demonstrate to use the dummy CompletableFuture to chain tasks
+
+### m5
+
+1. **SpecifyingThreadExample.example1**: to demonstrate how to specify threads
+
+
+### Improve I/O throughput:
+
+1. Identity long run tasks (thenCompose) and in-memory computation tasks
+2. Decide if you need to run every task in the same executor or not - having one executor may be faster, because moving data is costly

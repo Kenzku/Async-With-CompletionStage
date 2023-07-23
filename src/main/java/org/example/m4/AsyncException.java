@@ -14,6 +14,8 @@ public class AsyncException {
 
     /**
      * to demonstrate using exceptionally()
+     * exceptionally() can grab this exception, keep it and provide a new value - like handle()
+     * in this case the exception will not be forwarded to downstreams
      */
     public static void example1() {
         Supplier<List<Long>> supplyIDs = () -> {
@@ -39,6 +41,10 @@ public class AsyncException {
         CompletableFuture<List<Long>> supply = CompletableFuture.supplyAsync(supplyIDs);
 
         // exceptionally catch the exception from the upstream
+        // since the exceptionally() returns a value of the same type List<Long>
+        // the exception will not forward to downstream i.e. you recover from the exception
+        // see example3 -> when you do not return a default value,
+        // then the exception will be forwarded to all downstream tasks
         CompletableFuture<List<Long>> exceptionally = supply.exceptionally(e -> {
             System.out.println("Exceptionally - Running in thread: " + Thread.currentThread().getName());
             return List.of();
@@ -125,7 +131,9 @@ public class AsyncException {
 
     /**
      * to demonstrate using whenComplete()
+     * use whenComplete() when you do NOT plan to grab this exception, keep it and provide a new value
      * the exception will be forwarded to all the downstream CompletableFuture
+     * because it takes a BiConsumer, it cannot return anything to downstream
      * see "--->"
      */
     public static void example3() {
@@ -165,6 +173,8 @@ public class AsyncException {
                     if (exception != null) {
                         // log: java.lang.IllegalStateException: No data
                         System.out.println(exception.getMessage());
+                        // (BiConsumer) since we cannot not provide any return value of the same type
+                        // the same exception will be forwarded to all its downstream tasks.
                     } else {
                         // when there is no exception
                     }
@@ -260,8 +270,8 @@ public class AsyncException {
     public static void main(String args[]) {
         //example1();
         //example2();
-        //example3();
-        example4();
+        example3();
+        //example4();
     }
 
     private static void sleep(int timeout) {

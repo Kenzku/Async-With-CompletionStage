@@ -278,6 +278,9 @@ public class AsyncExampleMultiTasks {
         // Method 2:
         // you can use thenCombine()
         // use 1 future (cf1) to combine the second (cf2)
+        // the difference between thenCombine() and thenCompose():
+        // thenCombine is categorised as chaining 2 tasks to 1 task, i.e. 2 (completes) -> 1 task
+        // thenCompose is categorised to chain 1 to 1 task: i.e.  1 (long run completes) -> 1 -> 1
         //var newObject = cf1
         //        .thenCombine(cf2, (r1 /*result of s1*/, r2/*result of s2*/) -> new NewObject(r1, r2))
         //        .join();
